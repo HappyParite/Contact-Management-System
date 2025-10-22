@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>通讯录管理系统</title>
+    <style>
+        :root{
+            --primary:#409EFF; --primary-hover:#3a8ee6;
+            --bg:#f3f5f7; --card:#fff; --border:#e6e8eb; --text:#2f3440;
+            --danger:#f56c6c; --success:#67C23A; --info:#5ca7ff; --purple:#8a7cfb;
+        }
+        *{box-sizing:border-box}
+        body{margin:0;font:14px/1.6 "Microsoft YaHei",Segoe UI,Arial; background:var(--bg); color:var(--text);}
+        .layout{display:flex; min-height:100vh;}
+        .sider{width:220px;background:#2d3a4b;color:#cfd8e3;display:flex;flex-direction:column}
+        .sider .logo{padding:18px 16px;font-weight:700;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.06)}
+        .sider .menu{padding:10px}
+        .sider .menu a{display:flex; align-items:center; gap:8px; padding:10px 12px; color:#cfd8e3; text-decoration:none; border-radius:6px}
+        .sider .menu a.active,.sider .menu a:hover{background:rgba(255,255,255,.08); color:#fff}
+        .main{flex:1; display:flex; flex-direction:column}
+        .topbar{height:56px;background:linear-gradient(135deg,#58a6ff,#409eff);color:#fff; display:flex; align-items:center; justify-content:space-between; padding:0 18px; box-shadow:0 2px 8px rgba(0,0,0,.08)}
+        .topbar .title{font-size:18px; font-weight:700}
+        .container{padding:18px; max-width:1200px; margin:0 auto; width:100%}
+        .card{background:var(--card); border:1px solid var(--border); border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,.04); margin-bottom:16px}
+        .card .hd{padding:12px 16px; border-bottom:1px solid var(--border); font-weight:700; display:flex; align-items:center; gap:10px}
+        .card .bd{padding:14px 16px}
+        input{height:36px; padding:0 10px; border:1px solid var(--border); border-radius:6px; outline:none; transition:.2s}
+        input:focus{border-color:var(--primary); box-shadow:0 0 0 2px rgba(64,158,255,.15)}
+        .btn{height:34px; padding:0 14px; border:none; border-radius:6px; cursor:pointer; color:#fff; display:inline-flex; align-items:center; gap:6px}
+        .btn.primary{background:var(--primary)} .btn.primary:hover{background:var(--primary-hover)}
+        .btn.gray{background:#a8b0bb} .btn.gray:hover{background:#9098a4}
+        .btn.danger{background:var(--danger)} .btn.success{background:var(--success)} .btn.info{background:var(--info)} .btn.purple{background:var(--purple)}
+        .toolbar{display:flex; gap:10px; flex-wrap:wrap}
+        .grid{width:100%; border-collapse:collapse; overflow:hidden; border-radius:10px}
+        .grid th,.grid td{padding:10px 12px; border-bottom:1px solid var(--border); background:#fff}
+        .grid th{background:#f6f8fb; text-align:left}
+        tr:hover td{background:#f8fbff}
+        .flex{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+        .right{margin-left:auto}
+        .hidden{display:none}
+        .muted{color:#9aa3af}
+        .footer{text-align:center;color:#9aa3af;padding:12px}
+        .tag{font-size:12px; padding:2px 8px; background:#eef2ff; color:#5a67d8; border-radius:999px}
+        .login-panel{max-width:420px; margin:60px auto}
+        .login-panel .bd{display:flex; gap:10px; flex-wrap:wrap}
+        .login-panel input{flex:1}
+        .pagination{display:flex; gap:6px; align-items:center}
+        .pagination button{height:28px; padding:0 10px; border-radius:6px; border:1px solid var(--border); background:#fff; cursor:pointer}
+        .pagination .current{background:var(--primary); color:#fff; border-color:var(--primary)}
+        /* 折叠表单 */
+        .collapsed{display:none}
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 侧边栏 -->
+    <aside class="sider">
+        <div class="logo">📒 <span>通讯录管理系统</span></div>
+        <nav class="menu">
+            <a href="#/home" id="nav-home" class="active">📁 数据管理</a>
+            <a href="#/user" id="nav-user">👤 用户</a>
+            <a href="#/about" id="nav-about">ℹ️ 关于系统</a>
+        </nav>
+    </aside>
+
+    <!-- 主区域 -->
+    <section class="main">
+        <div class="topbar">
+            <div class="title">📇 联系人管理</div>
+            <div class="flex">
+                <span class="tag" id="whoami">未登录</span>
+                <button class="btn gray" id="btn-logout" title="退出登录">退出</button>
+            </div>
+        </div>
+        <div class="container">
+
+            <!-- 登录页 -->
+            <div id="page-login" class="login-panel card">
+                <div class="hd">用户登录 / 注册</div>
+                <div class="bd">
+                    <input id="lg-username" placeholder="用户名" style="flex:1 0 160px">
+                    <input id="lg-password" type="password" placeholder="密码" style="flex:1 0 160px">
+                    <div class="flex">
+                        <button class="btn primary" id="btn-login">登录</button>
+                        <button class="btn success" id="btn-register">注册</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 数据管理页 -->
+            <div id="page-home" class="hidden">
+                <!-- 工具条 -->
+                <div class="card">
+                    <div class="hd">工具栏</div>
+                    <div class="bd flex">
+                        <div class="toolbar">
+                            <button class="btn danger" id="btn-batch-del">批量删除</button>
+                            <button class="btn success" id="btn-new">新增</button>
+                            <label class="btn info" for="csvFile">批量导入</label>
+                            <input type="file" id="csvFile" accept=".csv" class="hidden">
+                            <button class="btn purple" id="btn-export">批量导出</button>
+                        </div>
+                        <div class="right flex">
+                            <input id="kw" placeholder="请输入名称/电话搜索" style="width:240px">
+                            <button class="btn primary" id="btn-search">查询</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 添加/编辑（默认折叠） -->
+                <div class="card collapsed" id="panel-edit">
+                    <div class="hd">添加 / 编辑联系人</div>
+                    <div class="bd">
+                        <form id="form" class="flex">
+                            <input type="hidden" id="id">
+                            <input id="name" placeholder="姓名（必填）" required style="flex:1 0 160px">
+                            <input id="phone" placeholder="电话（必填）" required style="flex:1 0 160px">
+                            <input id="email" placeholder="邮箱（可选）" style="flex:2 0 200px">
+                            <input id="note" placeholder="地址 / 备注（可选）" style="flex:3 0 300px">
+                            <div class="flex">
+                                <button type="submit" class="btn primary">💾 保存</button>
+                                <button type="button" id="resetBtn" class="btn gray">🧹 重置</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 列表 -->
+                <div class="card">
+                    <div class="hd">联系人列表</div>
+                    <div class="bd">
+                        <table class="grid" id="tbl">
+                            <thead>
+                            <tr>
+                                <th style="width:42px"><input type="checkbox" id="chk-all"></th>
+                                <th style="width:72px">序号</th>
+                                <th>姓名</th><th>电话</th><th>邮箱</th><th>备注</th><th style="width:140px">操作</th>
+                            </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                        <div class="flex" style="margin-top:10px">
+                            <div class="muted" id="summary">共 0 条</div>
+                            <div class="right pagination" id="pager"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 用户页 -->
+            <div id="page-user" class="card hidden">
+                <div class="hd">用户信息</div>
+                <div class="bd">
+                    <div>当前用户：<b id="user-name">-</b></div>
+                    <div class="muted" style="margin-top:8px">这里只展示登录用户；若需用户管理功能，可后续扩展。</div>
+                </div>
+            </div>
+
+            <!-- 关于页 -->
+            <div id="page-about" class="card hidden">
+                <div class="hd">关于系统</div>
+                <div class="bd">
+                    <div class="flex">
+                        <button class="btn primary" id="btn-health">检查后端连通性</button>
+                        <span id="health-text" class="muted"></span>
+                    </div>
+                    <p class="muted" style="margin-top:12px">版本：前端原生 HTML/JS；后端 Node.js + Express + MySQL（JWT 鉴权）。</p>
+                </div>
+            </div>
+
+            <div class="footer">© 2025 通讯录管理系统</div>
+        </div>
+    </section>
+</div>
+
+<script>
+    /** ====== 配置与基础封装 ====== */
+    const API = "http://localhost:8000/api/contacts";
+    const TOKEN_KEY = "auth_token";
+    const getToken = () => localStorage.getItem(TOKEN_KEY) || "";
+    const setToken = (t) => localStorage.setItem(TOKEN_KEY, t);
+    const clearToken = () => localStorage.removeItem(TOKEN_KEY);
+
+    let _isRedirecting = false;
+    async function apiFetch(url, options = {}) {
+        const headers = { ...(options.headers || {}) };
+        const tk = getToken();
+        if (tk) headers.Authorization = `Bearer ${tk}`;
+        const res = await fetch(url, { ...options, headers });
+        if (res.status === 401 && !/\/api\/auth\//.test(url) && !_isRedirecting) {
+            _isRedirecting = true; clearToken(); goto("#/login");
+        }
+        return res;
+    }
+    const $ = (s) => document.querySelector(s);
+
+    /** ====== 路由与页面切换 ====== */
+    function goto(hash){ location.hash = hash; }
+    function syncMenu(hash){
+        document.querySelectorAll(".menu a").forEach(a=>a.classList.remove("active"));
+        if (hash.startsWith("#/home")) $("#nav-home").classList.add("active");
+        else if (hash.startsWith("#/user")) $("#nav-user").classList.add("active");
+        else if (hash.startsWith("#/about")) $("#nav-about").classList.add("active");
+    }
+    function showPage(id){
+        ["#page-login","#page-home","#page-user","#page-about"].forEach(sel=>$(sel).classList.add("hidden"));
+        $(id).classList.remove("hidden");
+    }
+    async function router(){
+        const hash = location.hash || "#/home";
+        syncMenu(hash);
+        if (!getToken() && hash !== "#/login") { showPage("#page-login"); return; }
+        if (hash === "#/login") { showPage("#page-login"); return; }
+        if (hash.startsWith("#/home")) { showPage("#page-home"); await ensureMe(); await loadList(); return; }
+        if (hash.startsWith("#/user")) { showPage("#page-user"); await ensureMe(); return; }
+        if (hash.startsWith("#/about")) { showPage("#page-about"); return; }
+    }
+    window.addEventListener("hashchange", router);
+
+    /** ====== 登录 / 注册 / 退出 ====== */
+    $("#btn-login").onclick = async ()=>{
+        const u = $("#lg-username").value.trim(), p = $("#lg-password").value.trim();
+        if(!u || !p) return alert("请输入用户名和密码");
+        const r = await fetch(API.replace("/contacts","/auth/login"), {
+            method:"POST", headers:{ "Content-Type":"application/json" },
+            body: JSON.stringify({ username:u, password:p })
+        });
+        const j = await r.json();
+        if(!r.ok) return alert(j.error || "登录失败");
+        setToken(j.token);
+        goto("#/home");
+    };
+    $("#btn-register").onclick = async ()=>{
+        const u = $("#lg-username").value.trim(), p = $("#lg-password").value.trim();
+        if(!u || !p) return alert("请输入用户名和密码");
+        const r = await fetch(API.replace("/contacts","/auth/register"), {
+            method:"POST", headers:{ "Content-Type":"application/json" },
+            body: JSON.stringify({ username:u, password:p })
+        });
+        const j = await r.json();
+        if(!r.ok) return alert(j.error || "注册失败");
+        alert("注册成功，请登录");
+    };
+    $("#btn-logout").onclick = ()=>{ clearToken(); goto("#/login"); };
+
+    /** ====== 关于页：健康检查 ====== */
+    $("#btn-health").onclick = async ()=>{
+        const r = await fetch("http://localhost:8000/api/health");
+        $("#health-text").textContent = r.ok ? "✅ 后端在线" : "❌ 无法连接后端";
+    };
+
+    /** ====== 用户信息 ====== */
+    async function ensureMe(){
+        const r = await apiFetch(API.replace("/contacts","/auth/me"));
+        if(!r.ok){ clearToken(); goto("#/login"); return; }
+        const me = await r.json();
+        $("#whoami").textContent = `已登录：${me.username}`;
+        $("#user-name").textContent = me.username;
+    }
+
+    /** ====== 列表 / 搜索 / 分页 ====== */
+    let allRows = [];       // 后端返回的全部（当前用户）
+    let viewRows = [];      // 搜索/排序后的视图
+    let pageSize = 10, page = 1;
+
+    function applyFilter(){
+        const kw = $("#kw").value.trim().toLowerCase();
+        viewRows = allRows.filter(r=>{
+            const s = `${r.name||""} ${r.phone||""} ${r.email||""} ${r.note||""}`.toLowerCase();
+            return !kw || s.includes(kw);
+        });
+        // 按姓名排序，再按 id
+        viewRows.sort((a,b)=> (a.name||"").localeCompare(b.name||"", "zh") || a.id - b.id);
+        page = 1;
+        render();
+    }
+    function render(){
+        const total = viewRows.length;
+        const start = (page-1)*pageSize, end = Math.min(start+pageSize, total);
+        const rows = viewRows.slice(start, end);
+        const tbody = $("#tbl tbody");
+        if(!rows.length){
+            tbody.innerHTML = `<tr><td colspan="7" class="muted" style="padding:14px">暂无数据，试试添加或修改搜索条件。</td></tr>`;
+        }else{
+            tbody.innerHTML = rows.map((r, i)=>`
+      <tr data-id="${r.id}">
+        <td><input type="checkbox" class="row-chk"></td>
+        <td class="idx">${start + i + 1}</td>  <!-- 页面序号 -->
+        <td>${r.name||""}</td>
+        <td>${r.phone||""}</td>
+        <td>${r.email||""}</td>
+        <td>${r.note||""}</td>
+        <td>
+          <button class="btn success" data-act="edit">编辑</button>
+          <button class="btn danger" data-act="del">删除</button>
+        </td>
+      </tr>`).join("");
+        }
+        $("#summary").textContent = `共 ${total} 条，显示 ${total? (start+1) : 0}-${end}`;
+        renderPager(total);
+        $("#chk-all").checked = false;
+    }
+    function renderPager(total){
+        const pages = Math.max(1, Math.ceil(total/pageSize));
+        const el = $("#pager"); el.innerHTML = "";
+        const mk = (p, txt, cur=false)=>{
+            const b = document.createElement("button"); b.textContent=txt; if(cur) b.classList.add("current");
+            b.onclick = ()=>{ page=p; render(); };
+            el.appendChild(b);
+        };
+        mk(Math.max(1,page-1), "上一页");
+        for(let i=1;i<=pages;i++) mk(i, String(i), i===page);
+        mk(Math.min(pages,page+1), "下一页");
+    }
+
+    /** ====== 折叠编辑器 ====== */
+    const panelEdit = document.getElementById("panel-edit");
+    function openEditor(){
+        panelEdit.classList.remove("collapsed");
+        resetForm();
+        document.getElementById("name").focus();
+        window.scrollTo({ top: panelEdit.offsetTop - 20, behavior: "smooth" });
+    }
+    function closeEditor(){ panelEdit.classList.add("collapsed"); }
+    document.getElementById("btn-new").onclick = openEditor;
+
+    /** ====== 加载与保存 ====== */
+    async function loadList(){
+        const r = await apiFetch(API);
+        if(!r.ok) return;
+        allRows = await r.json();
+        applyFilter();
+    }
+    function resetForm(){
+        ["id","name","phone","email","note"].forEach(k=>$("#"+k).value="");
+    }
+    document.getElementById("resetBtn").onclick = ()=>{ resetForm(); closeEditor(); };
+
+    document.getElementById("form").onsubmit = async (e)=>{
+        e.preventDefault();
+        const id = $("#id").value || null;
+        const payload = {
+            name: $("#name").value.trim(),
+            phone: $("#phone").value.trim(),
+            email: $("#email").value.trim(),
+            note: $("#note").value.trim()
+        };
+        const r = await apiFetch(id? `${API}/${id}`: API, {
+            method: id? "PUT":"POST",
+            headers:{ "Content-Type":"application/json" },
+            body: JSON.stringify(payload)
+        });
+        const t = await r.json().catch(()=> ({}));
+        if(!r.ok) return alert(t.error || "保存失败");
+        resetForm();
+        await loadList();
+        closeEditor();                 // 保存后自动收起
+        alert("保存成功");
+    };
+
+    document.getElementById("tbl").addEventListener("click", async (ev)=>{
+        const btn = ev.target.closest("button"); if(!btn) return;
+        const tr = ev.target.closest("tr");
+        const id = tr.dataset.id;                 // 真实数据库 id（用于请求）
+        const act = btn.dataset.act;
+
+        if(act==="edit"){
+            $("#id").value = id;
+            $("#name").value = tr.children[2].textContent.trim();
+            $("#phone").value= tr.children[3].textContent.trim();
+            $("#email").value= tr.children[4].textContent.trim();
+            $("#note").value = tr.children[5].textContent.trim();
+            openEditor();
+        }else if(act==="del"){
+            const seq = tr.querySelector(".idx")?.textContent || "?";   // 页面序号
+            if(!confirm(`确定要删除 第 ${seq} 条吗？`)) return;
+            const r = await apiFetch(`${API}/${id}`, { method:"DELETE" });
+            if(!r.ok) return alert("删除失败");
+            await loadList();
+        }
+    });
+
+    /** ====== 勾选 & 批量删除 ====== */
+    document.getElementById("chk-all").onchange = (e)=>{
+        document.querySelectorAll(".row-chk").forEach(c=> c.checked = e.target.checked);
+    };
+    document.getElementById("btn-batch-del").onclick = async ()=>{
+        const ids = Array.from(document.querySelectorAll(".row-chk:checked"))
+            .map(c=> c.closest("tr").dataset.id);
+        if(ids.length===0) return alert("请先勾选要删除的行");
+        if(!confirm(`确定批量删除 ${ids.length} 条吗？`)) return;
+        for(const id of ids){
+            const r = await apiFetch(`${API}/${id}`, { method:"DELETE" });
+            if(!r.ok){ alert(`删除失败（id=${id}）`); break; }
+        }
+        await loadList();
+    };
+
+    /** ====== 搜索 ====== */
+    document.getElementById("btn-search").onclick = applyFilter;
+    document.getElementById("kw").addEventListener("keydown", e=>{ if(e.key==="Enter") applyFilter(); });
+
+    /** ====== 导出 CSV（当前过滤结果） ====== */
+    document.getElementById("btn-export").onclick = ()=>{
+        const header = ["index","name","phone","email","note"]; // 用 index 代替 id
+        const lines = [header.join(",")].concat(
+            viewRows.map((r, i)=> {
+                const seq = i + 1; // 过滤后的全量顺序
+                const arr = [seq, r.name||"", r.phone||"", r.email||"", r.note||""];
+                return arr.map(x=> `"${String(x).replace(/"/g,'""')}"`).join(",");
+            })
+        );
+        const blob = new Blob([lines.join("\n")], {type:"text/csv;charset=utf-8;"});
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "contacts_export.csv";
+        a.click();
+        URL.revokeObjectURL(a.href);
+    };
+
+    /** ====== 导入 CSV（name,phone,email,note） ====== */
+    document.getElementById("csvFile").addEventListener("change", async (ev)=>{
+        const file = ev.target.files[0]; if(!file) return;
+        const text = await file.text();
+        const rows = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+        let count = 0;
+        for(let i=0;i<rows.length;i++){
+            const cols = rows[i].split(",").map(s=> s.replace(/^"|"$/g,"").replace(/""/g,'"').trim());
+            if(i===0 && ["name","phone","email","note"].every((k,j)=> (cols[j]||"").toLowerCase()===k)) continue; // 跳过表头
+            const [name,phone,email,note] = cols;
+            if(!name || !phone) continue;
+            const r = await apiFetch(API, {
+                method:"POST", headers:{ "Content-Type":"application/json" },
+                body: JSON.stringify({ name, phone, email, note })
+            });
+            if(r.ok) count++;
+        }
+        alert(`导入完成：成功 ${count} 条`);
+        ev.target.value = ""; // 允许再次选择同一文件
+        await loadList();
+    });
+
+    /** ====== 启动：根据 token 进入对应页 ====== */
+    (async function init(){
+        if(getToken()){ goto("#/home"); } else { goto("#/login"); }
+        await router();
+    })();
+</script>
+</body>
+</html>
